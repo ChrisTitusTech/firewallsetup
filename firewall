@@ -51,6 +51,7 @@ $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
  
 # Allows faster firewall rules addition 
 allow() {
+    echo "Allowing $1:$2..."
     $iptables -A INPUT -p $2 --dport $1 -m state --state NEW -j ACCEPT
 }
 
@@ -63,21 +64,23 @@ $iptables -A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATE
 # Drop all other traffic
 $iptables -A INPUT -j DROP
 
-# print the activated rules to the console when script is completed
-$iptables -nL
-
 
 ## IPv6
 $ip6tables --policy INPUT DROP
 $ip6tables --policy OUTPUT DROP
 $ip6tables --policy FORWARD DROP
 
-$ip6tables -nL
+read -p "Do you want to print these new rules? (y/N): " choice
+case "$choice" in 
+    y|Y )
+        printf "\n## IPv4 -------------------------------------------------\n"
+        $iptables -nL
+        printf "\n## IPv6 -------------------------------------------------\n"
+        $ip6tables -nL
+        printf "\n---------------------------------------------------------\n"
+        ;;
+esac
 
-
-echo
-echo "---------------------------------------------------------"
-echo ""
 read -p "Do you want to make these changes pemanent? (y/N): " choice
 case "$choice" in 
   y|Y )
