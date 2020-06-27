@@ -81,6 +81,7 @@ echo ""
 read -p "Do you want to make these changes pemanent? (y/N): " choice
 case "$choice" in 
   y|Y )
+    printf "Saving configuration..."
     source /etc/os-release
     case "$ID" in
         "arch" )
@@ -89,7 +90,7 @@ case "$choice" in
             $ipsave > /etc/iptables/iptables.rules
             $ip6save > /etc/iptables/ip6tables.rules
             ;;
-        "centos":
+        "centos" )
             chkconfig=$(which chkconfig)
             service=$(which service)
             $chkconfig iptables on
@@ -102,6 +103,7 @@ case "$choice" in
             exit 1
             ;;
     esac
+    echo OK!
     ;;
 esac
 
