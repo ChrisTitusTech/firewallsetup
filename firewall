@@ -47,16 +47,15 @@ $iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 # Ratelimit SSH for attack protection
 $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 -j DROP
 $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --set
-$iptables -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
  
 # Allows faster firewall rules addition 
 allow() {
-    echo "Allowing $1:$2..."
+    echo "Allowing $2:$1..."
     $iptables -A INPUT -p $2 --dport $1 -m state --state NEW -j ACCEPT
 }
 
 ## Example
-# allow 8080 tcp
+allow 22 tcp
 
 # Allow pinging of your server
 $iptables -A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
