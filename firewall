@@ -96,6 +96,7 @@ case "$choice" in
             $service iptables save
             $chkconfig ip6tables on
             $service ip6tables save
+            ;;
         * )
             echo "ERROR: Distribuition not available for auto-save feature"
             exit 1
