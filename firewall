@@ -3,7 +3,8 @@
 # iptables example configuration script
 
 # Configure iptables path
-iptables=/bin/iptables
+iptables=$(which iptables)
+ip6tables=$(which ip6tables)
 
 # Drop ICMP echo-request messages sent to broadcast or multicast addresses
 echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
@@ -43,18 +44,18 @@ $iptables --policy FORWARD DROP
 $iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 $iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
  
-#Ratelimit SSH for attack protection
+# Ratelimit SSH for attack protection
 $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 -j DROP
 $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --set
 $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
  
-# allow protocol port
+# Allows faster firewall rules addition 
 allow() {
     $iptables -A INPUT -p $2 --dport $1 -m state --state NEW -j ACCEPT
 }
 
-# Allow certain ports to be accessible from the outside
-allow 8080 tcp
+## Example
+# allow 8080 tcp
 
 # Allow pinging of your server
 $iptables -A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
@@ -64,3 +65,36 @@ $iptables -A INPUT -j DROP
 
 # print the activated rules to the console when script is completed
 $iptables -nL
+
+
+## IPv6
+$ip6tables --policy INPUT DROP
+$ip6tables --policy OUTPUT DROP
+$ip6tables --policy FORWARD DROP
+
+$ip6tables -nL
+
+
+echo
+echo "---------------------------------------------------------"
+echo ""
+read -p "Do you want to make these changes pemanent? (y/N): " choice
+case "$choice" in 
+  y|Y )
+    source /etc/os-release
+    case "$NAME" in
+        "Arch Linux" )
+            ipsave=$(which iptables-save)
+            ip6save=$(which ip6tables-save)
+            $ipsave > /etc/iptables/iptables.rules
+            $ip6save > /etc/iptables/ip6tables.rules
+            ;;
+        * )
+            echo "ERROR: Distribuition not available for auto-save feature"
+            exit 1
+            ;;
+    esac
+    ;;
+esac
+
+echo "> iptables configuration completed!"

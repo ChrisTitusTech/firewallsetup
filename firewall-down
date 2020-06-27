@@ -1,6 +1,5 @@
 #!/bin/bash
-iptables=/bin/iptables
-
+iptables=$(which iptables)
 
 ${iptables} -F
 ${iptables} -X
