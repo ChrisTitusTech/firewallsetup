@@ -1,15 +1,23 @@
 #!/bin/bash
-/sbin/iptables -F
-/sbin/iptables -X
-/sbin/iptables -t nat -F
-/sbin/iptables -t nat -X
-/sbin/iptables -t mangle -F
-/sbin/iptables -t mangle -X
+#
+# Disable all firewall rules
 
-# the rules allow us to reconnect by opening up all traffic.
-/sbin/iptables -P INPUT ACCEPT
-/sbin/iptables -P FORWARD ACCEPT
-/sbin/iptables -P OUTPUT ACCEPT
-
-# print out all rules to the console after running this file.
-/sbin/iptables -nL
+# Set both IPv4 and IPv4 firewalls to same states
+for ip_version in 4 6; do
+    case ${ip_version} in
+        6)  cmd="/sbin/ip6tables" ;;
+        *)  cmd="/sbin/iptables" ;;
+    esac
+    ${cmd} -F
+    ${cmd} -X
+    ${cmd} -t nat -F
+    ${cmd} -t nat -X
+    ${cmd} -t mangle -F
+    ${cmd} -t mangle -X
+    ${cmd} -P INPUT ACCEPT
+    ${cmd} -P FORWARD ACCEPT
+    ${cmd} -P OUTPUT ACCEPT
+    echo "*** Firewall rules for IPv${ip_version} ***"
+    ${cmd} -nvL
+    echo
+done
