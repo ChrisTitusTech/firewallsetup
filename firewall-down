@@ -12,4 +12,4 @@
 /sbin/iptables -P OUTPUT ACCEPT
 
 # print out all rules to the console after running this file.
-/sbin/iptables -nL
+/sbin/iptables -nvL

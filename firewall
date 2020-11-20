@@ -46,10 +46,6 @@ echo 1 > /proc/sys/net/ipv4/conf/all/log_martians
 /sbin/iptables -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
  
 # Allow certain ports to be accessible from the outside
-/sbin/iptables -A INPUT -p tcp --dport 25565 -m state --state NEW -j ACCEPT  #Minecraft
-/sbin/iptables -A INPUT -p tcp --dport 8123 -m state --state NEW -j ACCEPT   #Dynmap plugin
-
-# Other rules for future use if needed.  Uncomment to activate
 # /sbin/iptables -A INPUT -p tcp --dport 80 -m state --state NEW -j ACCEPT    # http
 # /sbin/iptables -A INPUT -p tcp --dport 443 -m state --state NEW -j ACCEPT   # https
 
@@ -58,10 +54,9 @@ echo 1 > /proc/sys/net/ipv4/conf/all/log_martians
 
 # Allow pinging of your server
 /sbin/iptables -A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-
   
 # Drop all other traffic
 /sbin/iptables -A INPUT -j DROP
 
 # print the activated rules to the console when script is completed
-/sbin/iptables -nL
+/sbin/iptables -nvL

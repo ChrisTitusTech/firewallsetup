@@ -6,15 +6,21 @@ This is a script for setting up a firewall with settings for tarpitting ssh and 
 ## Download the rules to /etc/
 ```
 git clone https://github.com/ChrisTitusTech/firewallsetup.git
-````
-## Make the Rules Permenant
+```
+
+## Enable the iptables systemd service
+```
+sudo systemctl enable --now iptables.service
+```
+
+## Make the Rules Permanant
 ### Debian-based Distributions
 ```
 sudo apt install iptables-persistent
 sudo /etc/init.d/netfilter-persistent save
 ```
 ### Arch Linux Distributions
-*Use iptable-save which is pre-installed*
+*Use iptables-save which is pre-installed*
 ```
 sudo iptables-save > /etc/iptables/iptables.rules
 ```
