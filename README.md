@@ -22,7 +22,8 @@ sudo /etc/init.d/netfilter-persistent save
 ### Arch Linux Distributions
 *Use iptables-save which is pre-installed*
 ```
-sudo iptables-save > /etc/iptables/iptables.rules
+sudo iptables-save  >/etc/iptables/iptables.rules
+sudo ip6tables-save >/etc/iptables/ip6tables.rules
 ```
 ### RHEL / CentOS Distributions
 *This is by far the simpliest way to save rules and check them # chkconfig --list | grep iptables*
