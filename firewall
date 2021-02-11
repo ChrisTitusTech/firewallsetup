@@ -2,6 +2,78 @@
 #
 # iptables example configuration script
 
+# Configure iptables path
+# iptables example configuration script
+
+# Configure iptables path
+IPTABLES=/sbin/iptables
+IP6TABLES=/sbin/ip6tables
+
+declare -a arr=("$IPTABLES" "$IP6TABLES")
+
+for iptables in "${arr[@]}"
+do
+    # Flush all chains
+    $iptables --flush
+    
+    # Allow unlimited traffic on the loopback interface
+    $iptables -A INPUT -i lo -j ACCEPT
+    $iptables -A OUTPUT -o lo -j ACCEPT
+    
+    # Set default policies
+    $iptables --policy INPUT DROP
+    $iptables --policy OUTPUT ACCEPT
+    $iptables --policy FORWARD DROP
+    
+    # Previously initiated and accepted exchanges bypass rule checking
+    # Allow unlimited outbound traffic
+    $iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+    $iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+    #Ratelimit SSH for attack protection
+    $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 -j DROP
+    $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --set
+    $iptables -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
+   
+#    if [ "$iptables" = "$IP6TABLES" ];
+#    then
+#        $iptables -I INPUT -p icmpv6 -j ACCEPT
+#    else
+#        # Nagios
+#        $iptables -A INPUT -s 10.121.82.50 -j ACCEPT
+#    fi
+
+    # allow protocol port
+    allow() {
+        $iptables -A INPUT -p $2 --dport $1 -m state --state NEW -j ACCEPT
+        $iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+    }
+    
+    drop() {
+        $iptables -A INPUT -p $2 --sport $1 -j DROP
+    }
+
+
+    # Allow certain ports to be accessible from the outside
+    # Example:
+    allow 80 tcp
+    allow 443 tcp
+    drop 8443 tcp
+    
+    # Allow pinging of your server
+    $iptables -A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+    # Drop all other traffic
+#    $iptables -A INPUT -j DROP
+
+    # print the activated rules to the console when script is completed
+    $iptables -nL
+
+done
+
+# $IPTABLES -A INPUT -s 10.121.82.50 -j ACCEPT
+$IP6TABLES -I INPUT -p icmpv6 -j ACCEPT
+
 # Drop ICMP echo-request messages sent to broadcast or multicast addresses
 echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
 
@@ -22,46 +94,46 @@ echo 1 > /proc/sys/net/ipv4/conf/all/rp_filter
  
 # Log packets with impossible source addresses
 echo 1 > /proc/sys/net/ipv4/conf/all/log_martians
- 
-# Flush all chains
-/sbin/iptables --flush
- 
-# Allow unlimited traffic on the loopback interface
-/sbin/iptables -A INPUT -i lo -j ACCEPT
-/sbin/iptables -A OUTPUT -o lo -j ACCEPT
- 
-# Set default policies
-/sbin/iptables --policy INPUT DROP
-/sbin/iptables --policy OUTPUT DROP
-/sbin/iptables --policy FORWARD DROP
- 
-# Previously initiated and accepted exchanges bypass rule checking
-# Allow unlimited outbound traffic
-/sbin/iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-/sbin/iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
- 
-#Ratelimit SSH for attack protection
-/sbin/iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 -j DROP
-/sbin/iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --set
-/sbin/iptables -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
- 
-# Allow certain ports to be accessible from the outside
-/sbin/iptables -A INPUT -p tcp --dport 25565 -m state --state NEW -j ACCEPT  #Minecraft
-/sbin/iptables -A INPUT -p tcp --dport 8123 -m state --state NEW -j ACCEPT   #Dynmap plugin
 
-# Other rules for future use if needed.  Uncomment to activate
-# /sbin/iptables -A INPUT -p tcp --dport 80 -m state --state NEW -j ACCEPT    # http
-# /sbin/iptables -A INPUT -p tcp --dport 443 -m state --state NEW -j ACCEPT   # https
+# ---------------------------------------------------------
+read -p "Do you want to print these new rules? (y/N): " choice
+case "$choice" in 
+    y|Y )
+        printf "\n## IPv4 -------------------------------------------------\n"
+        $iptables -nL
+        printf "\n## IPv6 -------------------------------------------------\n"
+        $ip6tables -nL
+        printf "\n---------------------------------------------------------\n"
+        ;;
+esac
 
-# UDP packet rule.  This is just a random udp packet rule as an example only
-# /sbin/iptables -A INPUT -p udp --dport 5021 -m state --state NEW -j ACCEPT
+read -p "Do you want to make these changes pemanent? (y/N): " choice
+case "$choice" in 
+  y|Y )
+    printf "Saving configuration..."
+    source /etc/os-release
+    case "$ID" in
+        "arch" )
+            ipsave=$(which iptables-save)
+            ip6save=$(which ip6tables-save)
+            $ipsave > /etc/iptables/iptables.rules
+            $ip6save > /etc/iptables/ip6tables.rules
+            ;;
+        "centos" )
+            chkconfig=$(which chkconfig)
+            service=$(which service)
+            $chkconfig iptables on
+            $service iptables save
+            $chkconfig ip6tables on
+            $service ip6tables save
+            ;;
+        * )
+            echo "ERROR: Distribuition not available for auto-save feature"
+            exit 1
+            ;;
+    esac
+    echo OK!
+    ;;
+esac
 
-# Allow pinging of your server
-/sbin/iptables -A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-
-  
-# Drop all other traffic
-/sbin/iptables -A INPUT -j DROP
-
-# print the activated rules to the console when script is completed
-/sbin/iptables -nL
+echo "> iptables configuration completed!"
