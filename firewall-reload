@@ -1,3 +1,9 @@
 #!/bin/bash
+echo "--------------------------------------"
+echo "--     Flush Firewall Rules:        --"
+echo "--------------------------------------"
 /etc/firewallsetup/firewall-down
+echo "--------------------------------------"
+echo "--     Add Firewall Rules:          --"
+echo "--------------------------------------"
 /etc/firewallsetup/firewall
