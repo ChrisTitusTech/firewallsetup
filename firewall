@@ -25,43 +25,67 @@ echo 1 > /proc/sys/net/ipv4/conf/all/log_martians
  
 # Flush all chains
 /sbin/iptables --flush
+echo "--------------------------------------"
+echo "--     Filter Firewall Rules:       --"
+echo "--------------------------------------"
+# Allow traffic on the loopback interface \
+# This is required for certain local svcs like webserver or dns-server(s) on cloud instances
+/sbin/iptables -A INPUT -i lo -m comment --comment "Allow in from iface = lo to any" -j ACCEPT
+/sbin/iptables -A OUTPUT -o lo -m comment --comment "Allow out from iface = lo to any" -j ACCEPT
  
-# Allow unlimited traffic on the loopback interface
-/sbin/iptables -A INPUT -i lo -j ACCEPT
-/sbin/iptables -A OUTPUT -o lo -j ACCEPT
+# Previously initiated and accepted exchanges bypass rule checking
+# Allow all outbound traffic originating from our machine and traffic that belong(s) to existing connections
+/sbin/iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -m comment --comment "Quickly allow pkts that are part of existing connections to this device" -j ACCEPT
+/sbin/iptables -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED,RELATED -m comment --comment "Allowing all pkts from us and existing conn-pkts" -j ACCEPT
  
-# Set default policies
+#Ratelimit SSH for attack protection
+/sbin/iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --update --seconds 60 --hitcount 4 -j DROP
+/sbin/iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -m recent --set
+/sbin/iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -j ACCEPT
+ 
+# Allow certain ports to be accessible from the outside
+/sbin/iptables -A INPUT -p tcp --dport 25565 -m conntrack --ctstate NEW -j ACCEPT  #Minecraft
+/sbin/iptables -A INPUT -p tcp --dport 8123 -m conntrack --ctstate NEW -j ACCEPT   #Dynmap plugin
+
+# Other rules for future use if needed.  Uncomment to activate
+# /sbin/iptables -A INPUT -p tcp --dport 80 -m conntrack --ctstate NEW -m comment --comment "Apache2/NGINX/HTTP" -j ACCEPT    # http
+# /sbin/iptables -A INPUT -p tcp --dport 443 -m conntrack --ctstate NEW -m comment --comment "Apache2/NGINX/HTTPS" -j ACCEPT   # https
+
+# UDP packet rule.  This is just a random udp packet rule as an example only
+# /sbin/iptables -A INPUT -p udp --dport 5021 -m conntrack --ctstate NEW -j ACCEPT
+
+# Allow ping request/response to/from your host
+/sbin/iptables -A INPUT -p icmp --icmp-type echo-request -m conntrack --ctstate NEW -m comment --comment "Allow others to Ping us" -j ACCEPT
+/sbin/iptables -A OUTPUT -p icmp --icmp-type echo-reply -m conntrack --ctstate NEW -m comment --comment "Allow response to Ping from us" -j ACCEPT
+
+
+# Drop all other traffic
+/sbin/iptables -A INPUT -m comment --comment "Explicit drop rule for counters ** Paranoid" -j DROP
+
+# DDoS/Port scanner rules:
+echo "--------------------------------------"
+echo "--     Raw Firewall Rules:          --"
+echo "--------------------------------------"
+/sbin/iptables -t raw -A PREROUTING -p tcp --tcp-flags ALL ALL -m comment --comment "xmas pkts (xmas portscanners)" -j DROP
+/sbin/iptables -t raw -A PREROUTING -p tcp --tcp-flags ALL NONE -m comment --comment "null pkts (null portscanners)" -j DROP
+echo "--------------------------------------"
+echo "--     Mangle Firewall Rules:       --"
+echo "--------------------------------------"
+/sbin/iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP
+/sbin/iptables -t mangle -A PREROUTING -p tcp ! --syn -m conntrack --ctstate NEW -m comment --comment "DROP new packets that don't present the SYN flag" -j DROP
+/sbin/iptables -t mangle -A PREROUTING -p tcp -m conntrack --ctstate NEW -m tcpmss ! --mss 536:65535 -m comment --comment "DROP new pkts that have malformed mss values" -j DROP
+
+/sbin/iptables -t mangle -A INPUT -m conntrack --ctstate INVALID -j DROP
+/sbin/iptables -t mangle -A INPUT -p tcp ! --syn -m conntrack --ctstate NEW -m comment --comment "DROP new packets that don't present the SYN flag" -j DROP
+/sbin/iptables -t mangle -A INPUT -p tcp -m conntrack --ctstate NEW -m tcpmss ! --mss 536:65535 -m comment --comment "DROP new pkts that have malformed mss values" -j DROP
+
+# Set default policies (bastion firewall approach)
 /sbin/iptables --policy INPUT DROP
 /sbin/iptables --policy OUTPUT DROP
 /sbin/iptables --policy FORWARD DROP
- 
-# Previously initiated and accepted exchanges bypass rule checking
-# Allow unlimited outbound traffic
-/sbin/iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-/sbin/iptables -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
- 
-#Ratelimit SSH for attack protection
-/sbin/iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 -j DROP
-/sbin/iptables -A INPUT -p tcp --dport 22 -m state --state NEW -m recent --set
-/sbin/iptables -A INPUT -p tcp --dport 22 -m state --state NEW -j ACCEPT
- 
-# Allow certain ports to be accessible from the outside
-/sbin/iptables -A INPUT -p tcp --dport 25565 -m state --state NEW -j ACCEPT  #Minecraft
-/sbin/iptables -A INPUT -p tcp --dport 8123 -m state --state NEW -j ACCEPT   #Dynmap plugin
 
-# Other rules for future use if needed.  Uncomment to activate
-# /sbin/iptables -A INPUT -p tcp --dport 80 -m state --state NEW -j ACCEPT    # http
-# /sbin/iptables -A INPUT -p tcp --dport 443 -m state --state NEW -j ACCEPT   # https
-
-# UDP packet rule.  This is just a random udp packet rule as an example only
-# /sbin/iptables -A INPUT -p udp --dport 5021 -m state --state NEW -j ACCEPT
-
-# Allow pinging of your server
-/sbin/iptables -A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-
-  
-# Drop all other traffic
-/sbin/iptables -A INPUT -j DROP
 
 # print the activated rules to the console when script is completed
-/sbin/iptables -nL
+/sbin/iptables -t raw -nvL --line-numbers
+/sbin/iptables -t mangle -nvL --line-numbers
+/sbin/iptables -t filter -nvL --line-numbers
