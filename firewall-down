@@ -1,15 +1,32 @@
 #!/bin/bash
-/sbin/iptables -F
-/sbin/iptables -X
+/sbin/iptables -t filter -F
+/sbin/iptables -t filter -X
 /sbin/iptables -t nat -F
 /sbin/iptables -t nat -X
 /sbin/iptables -t mangle -F
 /sbin/iptables -t mangle -X
+/sbin/iptables -t raw -F
+/sbin/iptables -t raw -X
 
 # the rules allow us to reconnect by opening up all traffic.
 /sbin/iptables -P INPUT ACCEPT
 /sbin/iptables -P FORWARD ACCEPT
 /sbin/iptables -P OUTPUT ACCEPT
 
-# print out all rules to the console after running this file.
-/sbin/iptables -nL
+# print out all filter, nat, mangle and raw table rules to the console after running this file.
+echo "--------------------------------------"
+echo "--     Filter Firewall Rules:       --"
+echo "--------------------------------------"
+/sbin/iptables -t filter -nvL --line-numbers
+echo "--------------------------------------"
+echo "--     Nat Firewall Rules:          --"
+echo "--------------------------------------"
+/sbin/iptables -t nat -nvL --line-numbers
+echo "--------------------------------------"
+echo "--     Mangle Firewall Rules:       --"
+echo "--------------------------------------"
+/sbin/iptables -t mangle -nvL --line-numbers
+echo "--------------------------------------"
+echo "--     Raw Firewall Rules:          --"
+echo "--------------------------------------"
+/sbin/iptables -t raw -nvL --line-numbers
