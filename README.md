@@ -3,6 +3,15 @@
 
 This is a script for setting up a firewall with settings for tarpitting ssh and basic protections that everyone needs.
 
+```
+Syntax: firewall [-h|u|r|d]
+options:
+-h    Print this help message.
+-u    Activate iptables rules.
+-r    Reload iptables.
+-d    Take down iptables.
+```
+
 ## Download the rules to /etc/
 ```
 git clone https://github.com/ChrisTitusTech/firewallsetup.git

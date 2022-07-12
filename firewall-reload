@@ -1,3 +1,0 @@
-#!/bin/bash
-/etc/firewallsetup/firewall-down
-/etc/firewallsetup/firewall
