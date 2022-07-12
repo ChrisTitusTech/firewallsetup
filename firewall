@@ -2,6 +2,21 @@
 #
 # iptables example configuration script
 
+Help()
+{
+    # Display help
+    echo "firewall is a simple script to manage iptables with."
+    echo
+    echo "Syntax: firewall [-h|u|r|d]"
+    echo "options:"
+    echo "-h    Print this help message."
+    echo "-u    Activate iptables rules."
+    echo "-r    Reload iptables."
+    echo "-d    Take down iptables."
+}
+
+Firewall_Up()
+{
 # Drop ICMP echo-request messages sent to broadcast or multicast addresses
 echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
 
@@ -65,3 +80,53 @@ echo 1 > /proc/sys/net/ipv4/conf/all/log_martians
 
 # print the activated rules to the console when script is completed
 /sbin/iptables -nL
+}
+
+Firewall_Down()
+{
+#!/bin/bash
+/sbin/iptables -F
+/sbin/iptables -X
+/sbin/iptables -t nat -F
+/sbin/iptables -t nat -X
+/sbin/iptables -t mangle -F
+/sbin/iptables -t mangle -X
+
+# the rules allow us to reconnect by opening up all traffic.
+/sbin/iptables -P INPUT ACCEPT
+/sbin/iptables -P FORWARD ACCEPT
+/sbin/iptables -P OUTPUT ACCEPT
+
+# print out all rules to the console after running this file.
+/sbin/iptables -nL
+}
+
+if [ $# -eq 0 ]; then
+    echo "No option given. For help how to use this script, run:"
+    echo "firewall -h"
+    exit 1
+fi
+
+while getopts ":hurd" option; do
+    case $option in
+        h) # display Help
+            Help
+            exit;;
+
+        u)
+            Firewall_Up
+            exit;;
+        r)
+            Firewall_Down
+            Firewall_Up
+            exit;;
+        d)
+            Firewall_Down
+            exit;;
+        \?) # invalid option
+            echo "Invalid option. No such flag."
+            echo "For help:"
+            echo "firewall -h"
+            exit;;
+    esac
+done
